@@ -7,7 +7,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api/v1',
+    baseUrl: `${import.meta.env.VITE_API_URL || ''}/api/v1`,
     credentials: 'include', // send cookies with every request
   }),
   tagTypes: ['User', 'Kitchen', 'Food', 'FoodStats', 'Order', 'DeliveryOrders', 'ActiveDelivery', 'DeliveryHistory', 'Review', 'Wallet', 'Notification'],

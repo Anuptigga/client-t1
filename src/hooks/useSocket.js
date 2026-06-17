@@ -18,7 +18,8 @@ export function useSocket() {
     if (!user) return;
 
     // Connect to server
-    const socket = io(window.location.origin, {
+    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const socket = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
     });
