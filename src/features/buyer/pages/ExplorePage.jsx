@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import { Search, MapPin, ChefHat, Crosshair, List, Map as MapIcon, Loader2, AlertCircle } from 'lucide-react';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import KitchenMarker from '../components/KitchenMarker.jsx';
@@ -8,6 +8,18 @@ import KitchenListCard from '../components/KitchenListCard.jsx';
 import useGeolocation from '../../../hooks/useGeolocation.js';
 import { useGetNearbyKitchensQuery } from '../../kitchen/kitchenApi.js';
 import { GOOGLE_MAPS_API_KEY, MAP_ID, DEFAULT_CENTER, DEFAULT_ZOOM, isMapAvailable } from '../../../lib/mapConfig.js';
+
+function MapRecenter({ center }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map && center) {
+      map.panTo(center);
+    }
+  }, [map, center]);
+
+  return null;
+}
 
 export default function ExplorePage() {
   const { location, loading: geoLoading, requestLocation, isDefault } = useGeolocation();
@@ -146,6 +158,8 @@ export default function ExplorePage() {
                     fullscreenControl={false}
                     className="w-full h-full"
                   >
+                    <MapRecenter center={mapCenter} />
+
                     {/* User location marker */}
                     {location && (
                       <AdvancedMarker position={{ lat: location.latitude, lng: location.longitude }}>
@@ -225,5 +239,4 @@ export default function ExplorePage() {
     </PageShell>
   );
 }
-
 
