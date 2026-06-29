@@ -1,24 +1,24 @@
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, Loader2, Landmark, Building } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Wallet, ArrowDownLeft, ArrowUpRight, Loader2, Landmark, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import Input from '../../../components/ui/Input.jsx';
-import { selectCurrentUser } from '../../auth/authSlice.js';
-import { useGetWalletDataQuery, useAddFundsMutation, useWithdrawFundsMutation } from '../walletApi.js';
+import { selectCurrentUser, setCredentials } from '../../auth/authSlice.js';
+import { useGetWalletDataQuery, useWithdrawFundsMutation } from '../walletApi.js';
 import { useUpdateBankDetailsMutation } from '../../user/userApi.js';
 
 export default function WalletPage() {
+  const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
   const [page, setPage] = useState(1);
   const { data, isLoading } = useGetWalletDataQuery({ page, limit: 10 });
-  const [addFunds, { isLoading: adding }] = useAddFundsMutation();
   const [withdrawFunds, { isLoading: withdrawing }] = useWithdrawFundsMutation();
   const [updateBankDetails, { isLoading: updatingBank }] = useUpdateBankDetailsMutation();
   
   const [amount, setAmount] = useState('');
-  const [action, setAction] = useState(null); // 'add' or 'withdraw'
+  const [action, setAction] = useState(null);
   const [isEditingBank, setIsEditingBank] = useState(false);
   const [bankForm, setBankForm] = useState({
     accountHolderName: user?.bankDetails?.accountHolderName || '',
@@ -34,7 +34,8 @@ export default function WalletPage() {
   const handleBankSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateBankDetails(bankForm).unwrap();
+      const response = await updateBankDetails(bankForm).unwrap();
+      dispatch(setCredentials(response.data.user));
       toast.success('Bank details updated');
       setIsEditingBank(false);
     } catch (err) {
@@ -52,8 +53,12 @@ export default function WalletPage() {
 
     try {
       if (action === 'withdraw') {
-        await withdrawFunds(numAmount).unwrap();
-        toast.success(`Successfully withdrew ₹${numAmount} to bank account`);
+        const result = await withdrawFunds(numAmount).unwrap();
+        toast.success(
+          result?.data?.transaction?.status === 'completed'
+            ? `₹${numAmount} sent to your bank account`
+            : `₹${numAmount} withdrawal is processing`
+        );
       }
       setAmount('');
       setAction(null);
@@ -63,7 +68,17 @@ export default function WalletPage() {
   };
 
   if (user?.role === 'buyer') {
-    return null; // or redirect
+    return (
+      <PageShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+          <Wallet className="w-16 h-16 text-surface-300 mb-4" />
+          <h2 className="text-xl font-bold text-surface-700 mb-2">Wallet not available</h2>
+          <p className="text-surface-500 text-center max-w-sm mb-6">
+            The wallet is available for kitchen owners and delivery partners to manage their earnings and withdrawals.
+          </p>
+        </div>
+      </PageShell>
+    );
   }
 
   return (
@@ -258,6 +273,13 @@ export default function WalletPage() {
                         {txn.purpose.replace('_', ' ')}
                       </p>
                       <p className="text-xs text-surface-500">{txn.description}</p>
+                      {txn.status !== 'completed' && (
+                        <p className={`text-xs mt-0.5 font-medium ${
+                          txn.status === 'failed' ? 'text-red-500' : 'text-amber-600'
+                        }`}>
+                          {txn.status === 'failed' ? 'Failed — balance restored' : 'Processing'}
+                        </p>
+                      )}
                       <p className="text-xs text-surface-400 mt-0.5">
                         {new Date(txn.createdAt).toLocaleDateString('en-IN', {
                           day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'

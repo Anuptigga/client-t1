@@ -54,7 +54,7 @@ export const deliveryApi = apiSlice.injectEndpoints({
         method: 'POST',
         body: { otp },
       }),
-      invalidatesTags: ['ActiveDelivery', 'Order', 'DeliveryHistory'],
+      invalidatesTags: ['ActiveDelivery', 'Order', 'DeliveryHistory', 'Wallet'],
     }),
 
     // Delivery history

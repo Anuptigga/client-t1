@@ -90,14 +90,7 @@ function AppContent() {
           }
         />
 
-        <Route
-          path="/wallet"
-          element={
-            <ProtectedRoute allowedRoles={['buyer']}>
-              <WalletPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Wallet is available for kitchen and delivery roles via /kitchen/wallet and /delivery/wallet */}
 
         {/* Protected: Kitchen */}
         <Route

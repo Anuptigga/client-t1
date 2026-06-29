@@ -268,15 +268,38 @@ export default function OrderDetailPage() {
                 <CreditCard className="w-5 h-5 text-primary-500" />
                 Payment
               </h3>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-surface-500 capitalize">{order.payment?.method}</span>
-                <span className={`font-semibold ${
-                  order.payment?.status === 'completed' ? 'text-green-600' :
-                  order.payment?.status === 'refunded' ? 'text-yellow-600' :
-                  'text-surface-500'
-                }`}>
-                  {order.payment?.status?.toUpperCase()}
-                </span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-surface-500">Method</span>
+                  <span className="font-medium text-surface-700 capitalize">{order.payment?.method}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-surface-500">Status</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                    order.payment?.status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
+                    order.payment?.status === 'refunded' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                    order.payment?.status === 'refund_pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                    order.payment?.status === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+                    'bg-surface-100 text-surface-600 border border-surface-200'
+                  }`}>
+                    {order.payment?.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                    {order.payment?.status === 'refunded' && <CheckCircle className="w-3 h-3" />}
+                    {order.payment?.status === 'refund_pending' && <Clock className="w-3 h-3" />}
+                    {order.payment?.status === 'failed' && <XCircle className="w-3 h-3" />}
+                    {order.payment?.status === 'refund_pending' ? 'Refund Processing' :
+                     order.payment?.status?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                {order.payment?.paidAt && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-surface-500">Paid at</span>
+                    <span className="text-surface-600 text-xs">
+                      {new Date(order.payment.paidAt).toLocaleDateString('en-IN', {
+                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

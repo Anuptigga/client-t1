@@ -46,7 +46,7 @@ export default function UserProfilePage() {
     try {
       const trimmedPhone = phone ? phone.trim() : '';
       const res = await updateProfile({ name, phone: trimmedPhone, avatar }).unwrap();
-      dispatch(setCredentials({ user: res.data.user }));
+      dispatch(setCredentials(res.data.user));
       toast.success('Profile updated successfully');
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update profile');

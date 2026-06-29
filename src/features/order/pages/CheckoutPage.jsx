@@ -17,6 +17,7 @@ import {
   clearCart,
 } from '../../cart/cartSlice.js';
 import { usePlaceOrderMutation, useVerifyPaymentMutation } from '../../order/orderApi.js';
+import { selectCurrentUser } from '../../auth/authSlice.js';
 import useGeolocation from '../../../hooks/useGeolocation.js';
 
 export default function CheckoutPage() {
@@ -26,6 +27,7 @@ export default function CheckoutPage() {
   const kitchenId = useSelector(selectCartKitchenId);
   const kitchenName = useSelector(selectCartKitchenName);
   const subtotal = useSelector(selectCartSubtotal);
+  const user = useSelector(selectCurrentUser);
   const { location: buyerLocation, loading: geoLoading, requestLocation } = useGeolocation();
 
   const [placeOrder, { isLoading }] = usePlaceOrderMutation();
@@ -114,6 +116,9 @@ export default function CheckoutPage() {
       }).unwrap();
 
       const { order, payment } = res.data;
+      if (!window.Razorpay) {
+        throw new Error('Payment checkout could not be loaded. Please refresh and try again.');
+      }
 
       const options = {
         key: payment.keyId,
@@ -138,9 +143,14 @@ export default function CheckoutPage() {
           }
         },
         prefill: {
-          name: 'Test User',
-          email: 'test@example.com',
-          contact: '9999999999',
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        modal: {
+          ondismiss: () => {
+            toast('Payment was not completed. Your cart is still available.');
+          },
         },
         theme: {
           color: '#f97316', // primary-500

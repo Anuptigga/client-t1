@@ -8,16 +8,6 @@ export const walletApi = apiSlice.injectEndpoints({
       providesTags: ['Wallet'],
     }),
 
-    // Add funds
-    addFunds: builder.mutation({
-      query: ({ amount, referenceId }) => ({
-        url: '/wallet/add',
-        method: 'POST',
-        body: { amount, referenceId },
-      }),
-      invalidatesTags: ['Wallet', 'User'],
-    }),
-
     // Withdraw funds
     withdrawFunds: builder.mutation({
       query: (amount) => ({
@@ -32,6 +22,5 @@ export const walletApi = apiSlice.injectEndpoints({
 
 export const {
   useGetWalletDataQuery,
-  useAddFundsMutation,
   useWithdrawFundsMutation,
 } = walletApi;
