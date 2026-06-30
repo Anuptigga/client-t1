@@ -35,7 +35,7 @@ export default function WalletPage() {
     e.preventDefault();
     try {
       const response = await updateBankDetails(bankForm).unwrap();
-      dispatch(setCredentials(response.data.user));
+      dispatch(setCredentials({ user: response.data.user }));
       toast.success('Bank details updated');
       setIsEditingBank(false);
     } catch (err) {

@@ -38,7 +38,7 @@ function AppContent() {
 
   useEffect(() => {
     if (data?.data?.user) {
-      dispatch(setCredentials(data.data.user));
+      dispatch(setCredentials({ user: data.data.user }));
     } else if (error) {
       dispatch(logout());
     }

@@ -86,7 +86,7 @@ export default function SignupPage() {
       }
 
       const res = await signup(payload).unwrap();
-      dispatch(setCredentials(res.data.user));
+      dispatch(setCredentials({ user: res.data.user, token: res.data.token }));
       toast.success('Account created! Welcome to Rajabhoj 🎉');
       navigate('/');
     } catch (err) {

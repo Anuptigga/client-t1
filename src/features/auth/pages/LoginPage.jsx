@@ -57,7 +57,7 @@ export default function LoginPage() {
         password: formData.password,
       }).unwrap();
 
-      dispatch(setCredentials(res.data.user));
+      dispatch(setCredentials({ user: res.data.user, token: res.data.token }));
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (err) {
@@ -91,7 +91,7 @@ export default function LoginPage() {
         code: formData.otpCode,
       }).unwrap();
 
-      dispatch(setCredentials(res.data.user));
+      dispatch(setCredentials({ user: res.data.user, token: res.data.token }));
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (err) {
