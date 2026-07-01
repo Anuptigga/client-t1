@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useSelector } from 'react-redux';
-import { selectCurrentUser } from '../features/auth/authSlice.js';
+import { selectCurrentUser, selectAuthToken } from '../features/auth/authSlice.js';
 
 /**
  * Global Socket.IO connection hook.
@@ -12,6 +12,7 @@ import { selectCurrentUser } from '../features/auth/authSlice.js';
  */
 export function useSocket() {
   const user = useSelector(selectCurrentUser);
+  const token = useSelector(selectAuthToken);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function useSocket() {
     // Connect to server
     const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
     const socket = io(socketUrl, {
-      withCredentials: true,
+      auth: { token },
       transports: ['websocket', 'polling'],
     });
 
@@ -83,32 +84,4 @@ export function useOrderTracking(orderId, onStatusChange) {
       emit('leave:order', orderId);
     };
   }, [orderId, on, off, emit, onStatusChange]);
-}
-
-/**
- * Hook to track delivery partner location for an order.
- *
- * Usage:
- *   useDeliveryTracking(orderId, (loc) => { console.log(loc.latitude, loc.longitude) });
- */
-export function useDeliveryTracking(orderId, onLocationUpdate) {
-  const { on, off, emit } = useSocket();
-
-  useEffect(() => {
-    if (!orderId) return;
-
-    emit('join:order', orderId);
-
-    const handler = (data) => {
-      if (data.orderId === orderId && onLocationUpdate) {
-        onLocationUpdate(data);
-      }
-    };
-
-    on('delivery:location', handler);
-
-    return () => {
-      off('delivery:location', handler);
-    };
-  }, [orderId, on, off, emit, onLocationUpdate]);
 }

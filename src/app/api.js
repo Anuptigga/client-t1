@@ -12,7 +12,7 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl: `${import.meta.env.VITE_API_URL || ''}/api/v1`,
-    credentials: 'include', // still send cookies (works for same-origin / local dev)
+
     prepareHeaders: (headers, { getState }) => {
       const token = getState().auth.token;
       if (token) {
