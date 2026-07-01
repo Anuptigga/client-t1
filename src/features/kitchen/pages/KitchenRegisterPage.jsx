@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChefHat, MapPin, Phone, Clock, Utensils, ArrowRight, ArrowLeft, CheckCircle, Navigation } from 'lucide-react';
+import { ChefHat, MapPin, Phone, Clock, Utensils, ArrowRight, ArrowLeft, CheckCircle, Navigation, FileText, Upload, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import Input from '../../../components/ui/Input.jsx';
 import { useRegisterKitchenMutation } from '../kitchenApi.js';
+import { useUploadImageMutation, useUploadDocumentMutation } from '../foodApi.js';
 
 const CUISINE_OPTIONS = [
   'North Indian', 'South Indian', 'Bengali', 'Gujarati', 'Rajasthani',
@@ -15,11 +16,12 @@ const CUISINE_OPTIONS = [
 
 export default function KitchenRegisterPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: basic info, 2: address, 3: hours & cuisine
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     phone: '',
+    coverImage: '',
     street: '',
     city: '',
     state: '',
@@ -29,10 +31,17 @@ export default function KitchenRegisterPage() {
     cuisineTypes: [],
     latitude: null,
     longitude: null,
+    kycDocumentUrl: '',
   });
+  
   const [isLocating, setIsLocating] = useState(false);
   const [errors, setErrors] = useState({});
-  const [registerKitchen, { isLoading }] = useRegisterKitchenMutation();
+  const [registerKitchen, { isLoading: isRegistering }] = useRegisterKitchenMutation();
+  const [uploadImage, { isLoading: isUploadingImage }] = useUploadImageMutation();
+  const [uploadDocument, { isLoading: isUploadingDoc }] = useUploadDocumentMutation();
+
+  const fileInputRef = useRef(null);
+  const docInputRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -54,6 +63,7 @@ export default function KitchenRegisterPage() {
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = 'Kitchen name is required';
       if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+      // coverImage is optional for now, but we can recommend it
     }
 
     if (step === 2) {
@@ -62,6 +72,17 @@ export default function KitchenRegisterPage() {
       if (!formData.state.trim()) newErrors.state = 'State is required';
       if (!formData.pincode.trim()) newErrors.pincode = 'Pincode is required';
       else if (!/^\d{6}$/.test(formData.pincode)) newErrors.pincode = 'Pincode must be 6 digits';
+      if (!formData.latitude || !formData.longitude) {
+        newErrors.location = 'GPS Location is mandatory. Please capture it.';
+        toast.error('Please capture your location to continue');
+      }
+    }
+
+    if (step === 4) {
+      if (!formData.kycDocumentUrl) {
+        newErrors.kycDocumentUrl = 'KYC Document is required';
+        toast.error('Please upload your KYC PDF document');
+      }
     }
 
     setErrors(newErrors);
@@ -88,6 +109,7 @@ export default function KitchenRegisterPage() {
           longitude: position.coords.longitude,
         }));
         setIsLocating(false);
+        setErrors({ ...errors, location: '' });
         toast.success('Exact location captured!');
       },
       (error) => {
@@ -98,12 +120,54 @@ export default function KitchenRegisterPage() {
     );
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error('Image must be less than 5MB');
+    }
+
+    try {
+      const res = await uploadImage({ file, category: 'kitchen' }).unwrap();
+      setFormData((prev) => ({ ...prev, coverImage: res.data.url }));
+      toast.success('Cover image uploaded');
+    } catch (err) {
+      toast.error('Failed to upload image');
+    }
+  };
+
+  const handleDocUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      return toast.error('Only PDF files are allowed');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      return toast.error('Document must be less than 10MB');
+    }
+
+    try {
+      const res = await uploadDocument({ file, category: 'kyc' }).unwrap();
+      setFormData((prev) => ({ ...prev, kycDocumentUrl: res.data.url }));
+      setErrors({ ...errors, kycDocumentUrl: '' });
+      toast.success('KYC Document uploaded');
+    } catch (err) {
+      toast.error('Failed to upload document');
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!validateStep()) return;
+    
     try {
       await registerKitchen({
         name: formData.name,
         description: formData.description,
         phone: formData.phone,
+        coverImage: formData.coverImage,
         address: {
           street: formData.street,
           city: formData.city,
@@ -115,10 +179,9 @@ export default function KitchenRegisterPage() {
           close: formData.closeTime,
         },
         cuisineTypes: formData.cuisineTypes,
-        ...(formData.latitude && formData.longitude && {
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-        }),
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        kycDocumentUrl: formData.kycDocumentUrl,
       }).unwrap();
 
       toast.success('Kitchen registered! Pending admin approval.');
@@ -127,6 +190,13 @@ export default function KitchenRegisterPage() {
       toast.error(err?.data?.message || 'Registration failed');
     }
   };
+
+  const steps = [
+    { num: 1, label: 'Basic Info' },
+    { num: 2, label: 'Address' },
+    { num: 3, label: 'Cuisine' },
+    { num: 4, label: 'KYC' },
+  ];
 
   return (
     <PageShell>
@@ -147,11 +217,7 @@ export default function KitchenRegisterPage() {
 
           {/* Step indicator */}
           <div className="flex items-center gap-2 mb-8">
-            {[
-              { num: 1, label: 'Basic Info' },
-              { num: 2, label: 'Address' },
-              { num: 3, label: 'Cuisine & Hours' },
-            ].map((s, i) => (
+            {steps.map((s, i) => (
               <div key={s.num} className="flex items-center gap-2 flex-1">
                 <div className="flex flex-col items-center flex-1">
                   <div
@@ -171,7 +237,7 @@ export default function KitchenRegisterPage() {
                     {s.label}
                   </span>
                 </div>
-                {i < 2 && (
+                {i < steps.length - 1 && (
                   <div
                     className={`flex-1 h-0.5 rounded-full mt-[-16px] sm:mt-0 transition-all duration-300 ${
                       step > s.num ? 'bg-primary-500' : 'bg-surface-200'
@@ -187,6 +253,41 @@ export default function KitchenRegisterPage() {
             {/* Step 1: Basic Info */}
             {step === 1 && (
               <div className="space-y-5">
+                {/* Image Upload */}
+                <div className="flex flex-col items-center mb-6">
+                  <div 
+                    className="w-32 h-32 rounded-2xl border-2 border-dashed border-surface-300 flex flex-col items-center justify-center bg-surface-50 cursor-pointer hover:bg-surface-100 transition-colors overflow-hidden relative group"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {formData.coverImage ? (
+                      <>
+                        <img src={formData.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Upload className="w-6 h-6 text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {isUploadingImage ? (
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
+                        ) : (
+                          <>
+                            <ImageIcon className="w-8 h-8 text-surface-400 mb-2" />
+                            <span className="text-xs text-surface-500 font-medium">Cover Image</span>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/jpeg,image/png,image/webp" 
+                    onChange={handleImageUpload}
+                  />
+                </div>
+
                 <Input
                   id="kitchen-name"
                   label="Kitchen Name"
@@ -240,16 +341,20 @@ export default function KitchenRegisterPage() {
                   </div>
                   <Button 
                     type="button" 
-                    variant="outline" 
+                    variant={formData.latitude ? "solid" : "outline"} 
                     size="sm" 
                     onClick={handleLocateMe}
                     isLoading={isLocating}
                     className="text-xs py-1.5"
                   >
                     <Navigation className="w-3.5 h-3.5 mr-1.5" />
-                    {formData.latitude ? 'Location Captured ✓' : 'Use Current Location'}
+                    {formData.latitude ? 'Location Captured ✓' : 'Capture Location'}
                   </Button>
                 </div>
+                {errors.location && (
+                  <p className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded-lg">{errors.location}</p>
+                )}
+
                 <Input
                   id="kitchen-street"
                   label="Street Address"
@@ -293,8 +398,7 @@ export default function KitchenRegisterPage() {
                 <p className="text-xs text-surface-400 bg-surface-50 rounded-lg p-3">
                   📍 {formData.latitude 
                       ? 'Exact GPS coordinates captured! Your address will be saved for display purposes.' 
-                      : 'Your address will be geocoded to show your kitchen on the map. Click "Use Current Location" for better accuracy.'}
-                  Buyers within 10 km will be able to discover you.
+                      : 'You MUST capture your GPS location to proceed. Buyers within 10 km will discover you using this.'}
                 </p>
 
                 <div className="flex gap-3">
@@ -379,13 +483,71 @@ export default function KitchenRegisterPage() {
                     <ArrowLeft className="w-4 h-4 mr-1" />
                     Back
                   </Button>
-                  <Button onClick={handleSubmit} isLoading={isLoading} className="flex-[2]">
-                    Register Kitchen
+                  <Button onClick={handleNext} className="flex-[2]">
+                    Continue
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               </div>
             )}
+
+            {/* Step 4: KYC Documents */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <FileText className="w-12 h-12 text-primary-500 mx-auto mb-3" />
+                  <h3 className="font-semibold text-surface-800 text-lg">Identity Verification</h3>
+                  <p className="text-sm text-surface-500 mt-1">Upload a single PDF containing your FSSAI, PAN, and Aadhaar cards.</p>
+                </div>
+
+                <div 
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${formData.kycDocumentUrl ? 'border-green-500 bg-green-50' : 'border-surface-300 hover:bg-surface-50'}`}
+                  onClick={() => docInputRef.current?.click()}
+                >
+                  {isUploadingDoc ? (
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mb-3" />
+                      <span className="text-surface-600 font-medium">Uploading document...</span>
+                    </div>
+                  ) : formData.kycDocumentUrl ? (
+                    <div className="flex flex-col items-center">
+                      <CheckCircle className="w-10 h-10 text-green-500 mb-3" />
+                      <span className="text-green-700 font-medium">Document Uploaded Successfully</span>
+                      <span className="text-xs text-green-600 mt-1">Click to replace</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-10 h-10 text-surface-400 mb-3" />
+                      <span className="text-surface-700 font-medium">Click to upload PDF</span>
+                      <span className="text-xs text-surface-400 mt-1">Max size: 10MB</span>
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={docInputRef} 
+                    className="hidden" 
+                    accept="application/pdf" 
+                    onChange={handleDocUpload}
+                  />
+                </div>
+                
+                {errors.kycDocumentUrl && (
+                  <p className="text-red-500 text-xs font-medium text-center">{errors.kycDocumentUrl}</p>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Back
+                  </Button>
+                  <Button onClick={handleSubmit} isLoading={isRegistering} className="flex-[2]">
+                    Complete Registration
+                    <CheckCircle className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Note */}

@@ -92,6 +92,19 @@ export const foodApi = apiSlice.injectEndpoints({
         };
       },
     }),
+
+    // Upload document (PDF)
+    uploadDocument: builder.mutation({
+      query: ({ file, category = 'kyc' }) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        return {
+          url: `/upload/document?category=${category}`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+    }),
   }),
 });
 
@@ -105,4 +118,5 @@ export const {
   useDeleteFoodMutation,
   useResetDailyQuantitiesMutation,
   useUploadImageMutation,
+  useUploadDocumentMutation,
 } = foodApi;
