@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChefHat, UtensilsCrossed, Package, AlertTriangle,
@@ -8,6 +9,7 @@ import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import { useGetMyKitchenQuery, useToggleKitchenStatusMutation } from '../kitchenApi.js';
 import { useGetMyFoodStatsQuery } from '../foodApi.js';
+import { useSocket } from '../../../hooks/useSocket.js';
 
 export default function KitchenDashboardPage() {
   const { data: kitchenData, isLoading: kitchenLoading } = useGetMyKitchenQuery();
@@ -16,6 +18,23 @@ export default function KitchenDashboardPage() {
 
   const kitchen = kitchenData?.data?.kitchen;
   const stats = statsData?.data?.stats;
+
+  // Join kitchen socket room for real-time notifications
+  const { on, off, emit } = useSocket();
+
+  useEffect(() => {
+    if (!kitchen?._id) return;
+    emit('join:kitchen', kitchen._id);
+  }, [kitchen?._id, emit]);
+
+  const handleNewOrder = useCallback((data) => {
+    toast.success(`🔔 New order #${data?.orderNumber || ''} received!`);
+  }, []);
+
+  useEffect(() => {
+    on('order:new', handleNewOrder);
+    return () => off('order:new', handleNewOrder);
+  }, [on, off, handleNewOrder]);
 
   const handleToggle = async () => {
     try {

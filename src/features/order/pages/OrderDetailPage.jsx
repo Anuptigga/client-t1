@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
@@ -10,6 +11,7 @@ import Button from '../../../components/ui/Button.jsx';
 import { useGetOrderByIdQuery, useCancelOrderMutation } from '../orderApi.js';
 import { useCanReviewOrderQuery } from '../../review/reviewApi.js';
 import { selectCurrentUser } from '../../auth/authSlice.js';
+import { useOrderTracking } from '../../../hooks/useSocket.js';
 
 const STATUS_STEPS = ['pending', 'accepted', 'preparing', 'ready', 'picked_up', 'delivered', 'completed'];
 
@@ -27,7 +29,7 @@ const STATUS_LABELS = {
 export default function OrderDetailPage() {
   const { id } = useParams();
   const user = useSelector(selectCurrentUser);
-  const { data, isLoading, error } = useGetOrderByIdQuery(id);
+  const { data, isLoading, error, refetch } = useGetOrderByIdQuery(id);
   const [cancelOrder, { isLoading: cancelling }] = useCancelOrderMutation();
   const order = data?.data?.order;
   
@@ -35,6 +37,15 @@ export default function OrderDetailPage() {
     skip: !order || !['delivered', 'completed'].includes(order.status),
   });
   const canReview = reviewData?.data?.canReview;
+
+  // Live order status updates via Socket.IO
+  const handleStatusChange = useCallback((eventData) => {
+    const label = STATUS_LABELS[eventData.status] || eventData.status;
+    toast.success(`Order updated: ${label}`);
+    refetch();
+  }, [refetch]);
+
+  useOrderTracking(id, handleStatusChange);
 
   if (isLoading) {
     return (

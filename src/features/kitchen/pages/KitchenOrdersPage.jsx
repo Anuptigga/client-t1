@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Clock, CheckCircle, ChefHat, Package, XCircle, ArrowRight,
   Loader2, Bell, User, Phone, AlertTriangle,
@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import { useGetKitchenOrdersQuery, useUpdateOrderStatusMutation, useCancelOrderMutation } from '../../order/orderApi.js';
+import { useGetMyKitchenQuery } from '../kitchenApi.js';
+import { useSocket } from '../../../hooks/useSocket.js';
 
 const STATUS_TABS = [
   { key: '', label: 'All', icon: null },
@@ -26,7 +28,10 @@ export default function KitchenOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useGetKitchenOrdersQuery({
+  const { data: kitchenData } = useGetMyKitchenQuery();
+  const kitchenId = kitchenData?.data?.kitchen?._id;
+
+  const { data, isLoading, refetch } = useGetKitchenOrdersQuery({
     page,
     limit: 20,
     status: statusFilter || undefined,
@@ -36,6 +41,33 @@ export default function KitchenOrdersPage() {
 
   const orders = data?.orders || [];
   const pagination = data?.pagination;
+
+  // Join kitchen socket room and listen for real-time events
+  const { on, off, emit } = useSocket();
+
+  useEffect(() => {
+    if (!kitchenId) return;
+    emit('join:kitchen', kitchenId);
+  }, [kitchenId, emit]);
+
+  const handleNewOrder = useCallback(() => {
+    toast.success('🔔 New order received!');
+    refetch();
+  }, [refetch]);
+
+  const handleOrderCancelled = useCallback((data) => {
+    toast.error(`Order #${data?.orderNumber || ''} was cancelled`);
+    refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    on('order:new', handleNewOrder);
+    on('order:cancelled', handleOrderCancelled);
+    return () => {
+      off('order:new', handleNewOrder);
+      off('order:cancelled', handleOrderCancelled);
+    };
+  }, [on, off, handleNewOrder, handleOrderCancelled]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     try {
