@@ -14,10 +14,10 @@ export const userApi = apiSlice.injectEndpoints({
 
     // Update location
     updateUserLocation: builder.mutation({
-      query: ({ latitude, longitude }) => ({
+      query: ({ latitude, longitude, street, city, state, pincode }) => ({
         url: '/users/location',
         method: 'PUT',
-        body: { latitude, longitude },
+        body: { latitude, longitude, street, city, state, pincode },
       }),
       invalidatesTags: ['User'],
     }),

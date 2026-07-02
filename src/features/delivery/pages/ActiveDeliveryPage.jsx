@@ -6,9 +6,9 @@ import {
 import toast from 'react-hot-toast';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
-import { useGetActiveDeliveryQuery, useMarkDeliveredMutation } from '../deliveryApi.js';
+import { useGetActiveDeliveryQuery, useMarkDeliveredMutation, useMarkPickedUpMutation } from '../deliveryApi.js';
 import { useSocket } from '../../../hooks/useSocket.js';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function ActiveDeliveryPage() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function ActiveDeliveryPage() {
     pollingInterval: 10000,
   });
   const [markDelivered, { isLoading: delivering }] = useMarkDeliveredMutation();
+  const [markPickedUp, { isLoading: pickingUp }] = useMarkPickedUpMutation();
   const { emit } = useSocket();
   const [otpInput, setOtpInput] = useState('');
 
@@ -27,6 +28,16 @@ export default function ActiveDeliveryPage() {
     // Join order room for tracking
     emit('join:order', order._id);
   }, [order?._id, emit]);
+
+  const handlePickup = async () => {
+    if (!order) return;
+    try {
+      await markPickedUp(order._id).unwrap();
+      toast.success('Order picked up! Head to the customer.');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to mark picked up');
+    }
+  };
 
   const handleDeliver = async () => {
     if (!order) return;
@@ -168,31 +179,50 @@ export default function ActiveDeliveryPage() {
           </div>
         </div>
 
-        {/* OTP Input and Mark delivered button */}
-        <div className="bg-white rounded-2xl border border-surface-100 p-5">
-          <h3 className="font-bold text-surface-800 mb-3">Complete Delivery</h3>
-          <p className="text-sm text-surface-500 mb-4">
-            Ask the customer for their 4-digit Delivery PIN to complete this order.
-          </p>
-          <input
-            type="text"
-            placeholder="Enter 4-digit PIN"
-            value={otpInput}
-            onChange={(e) => setOtpInput(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-surface-200 text-center text-xl tracking-widest font-bold focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
-            maxLength={4}
-          />
-          <Button
-            fullWidth
-            size="lg"
-            onClick={handleDeliver}
-            isLoading={delivering}
-            className="bg-green-500 hover:bg-green-600 text-white"
-          >
-            <CheckCircle className="w-5 h-5 mr-2" />
-            Verify PIN & Mark Delivered
-          </Button>
-        </div>
+        {/* Actions */}
+        {order.status === 'ready' ? (
+          <div className="bg-white rounded-2xl border border-surface-100 p-5">
+            <h3 className="font-bold text-surface-800 mb-3">Pickup Order</h3>
+            <p className="text-sm text-surface-500 mb-4">
+              Once you have picked up the order from the kitchen, mark it as picked up to notify the customer.
+            </p>
+            <Button
+              fullWidth
+              size="lg"
+              onClick={handlePickup}
+              isLoading={pickingUp}
+              className="bg-primary-500 hover:bg-primary-600 text-white"
+            >
+              <Package className="w-5 h-5 mr-2" />
+              Mark as Picked Up
+            </Button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-surface-100 p-5">
+            <h3 className="font-bold text-surface-800 mb-3">Complete Delivery</h3>
+            <p className="text-sm text-surface-500 mb-4">
+              Ask the customer for their 4-digit Delivery PIN to complete this order.
+            </p>
+            <input
+              type="text"
+              placeholder="Enter 4-digit PIN"
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-surface-200 text-center text-xl tracking-widest font-bold focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
+              maxLength={4}
+            />
+            <Button
+              fullWidth
+              size="lg"
+              onClick={handleDeliver}
+              isLoading={delivering}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Verify PIN & Mark Delivered
+            </Button>
+          </div>
+        )}
       </div>
     </PageShell>
   );

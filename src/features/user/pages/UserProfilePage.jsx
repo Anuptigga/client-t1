@@ -143,7 +143,145 @@ export default function UserProfilePage() {
             </div>
           </form>
         </div>
+
+        {/* Default Location Section */}
+        <div className="bg-white rounded-2xl border border-surface-100 p-6 shadow-soft mt-8">
+          <h2 className="text-xl font-bold text-surface-800 mb-6 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-primary-500" />
+            Default Delivery Address
+          </h2>
+          
+          <LocationForm user={user} />
+        </div>
       </div>
     </PageShell>
+  );
+}
+
+function LocationForm({ user }) {
+  const dispatch = useDispatch();
+  const [street, setStreet] = useState(user?.defaultAddress?.street || '');
+  const [city, setCity] = useState(user?.defaultAddress?.city || '');
+  const [state, setState] = useState(user?.defaultAddress?.state || '');
+  const [pincode, setPincode] = useState(user?.defaultAddress?.pincode || '');
+  const [coords, setCoords] = useState(
+    user?.location?.coordinates
+      ? { lat: user.location.coordinates[1], lng: user.location.coordinates[0] } // [lng, lat]
+      : null
+  );
+
+  const [updateLocation, { isLoading }] = useUpdateUserLocationMutation();
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const handleCaptureGPS = () => {
+    if (!navigator.geolocation) {
+      return toast.error('Geolocation is not supported by your browser');
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoLoading(false);
+        toast.success('GPS coordinates captured');
+      },
+      (err) => {
+        setGeoLoading(false);
+        toast.error('Failed to get location. Please allow permissions.');
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const handleSaveLocation = async (e) => {
+    e.preventDefault();
+    if (!coords) return toast.error('Please capture your GPS location first');
+    
+    try {
+      const res = await updateLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+        street,
+        city,
+        state,
+        pincode,
+      }).unwrap();
+      
+      dispatch(setCredentials({ user: res.data.user }));
+      toast.success('Default location updated');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update location');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSaveLocation} className="space-y-6">
+      <div className="bg-surface-50 p-4 rounded-xl border border-surface-100 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-surface-800">GPS Coordinates</p>
+          <p className="text-xs text-surface-500">
+            {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'Not set'}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant={coords ? 'outline' : 'primary'}
+          onClick={handleCaptureGPS}
+          isLoading={geoLoading}
+          className="text-xs px-3 py-1.5"
+        >
+          {coords ? 'Recapture GPS' : 'Capture GPS'}
+        </Button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-6">
+        <div className="space-y-2 sm:col-span-2">
+          <label className="text-sm font-semibold text-surface-700">Street Address</label>
+          <input
+            type="text"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+            placeholder="123 Gandhi Road"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-surface-700">City</label>
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+            placeholder="Delhi"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-surface-700">State</label>
+          <input
+            type="text"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+            placeholder="Delhi"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-surface-700">Pincode</label>
+          <input
+            type="text"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+            placeholder="110001"
+          />
+        </div>
+      </div>
+
+      <div className="pt-4 border-t border-surface-100 flex justify-end">
+        <Button type="submit" isLoading={isLoading} className="px-8">
+          <Save className="w-4 h-4 mr-2" />
+          Save Address
+        </Button>
+      </div>
+    </form>
   );
 }

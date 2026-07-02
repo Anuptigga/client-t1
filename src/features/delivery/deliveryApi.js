@@ -47,6 +47,15 @@ export const deliveryApi = apiSlice.injectEndpoints({
       invalidatesTags: ['DeliveryOrders', 'ActiveDelivery', 'Order'],
     }),
 
+    // Mark picked up
+    markPickedUp: builder.mutation({
+      query: (orderId) => ({
+        url: `/delivery/pickup/${orderId}`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['ActiveDelivery', 'Order'],
+    }),
+
     // Mark delivered
     markDelivered: builder.mutation({
       query: ({ orderId, otp }) => ({
@@ -72,6 +81,7 @@ export const {
   useGetAvailableOrdersQuery,
   useGetActiveDeliveryQuery,
   useAcceptDeliveryMutation,
+  useMarkPickedUpMutation,
   useMarkDeliveredMutation,
   useGetDeliveryHistoryQuery,
 } = deliveryApi;

@@ -16,6 +16,7 @@ import KitchenRegisterPage from './features/kitchen/pages/KitchenRegisterPage.js
 import KitchenDashboardPage from './features/kitchen/pages/KitchenDashboardPage.jsx';
 import MenuManagementPage from './features/kitchen/pages/MenuManagementPage.jsx';
 import KitchenOrdersPage from './features/kitchen/pages/KitchenOrdersPage.jsx';
+import KitchenSettingsPage from './features/kitchen/pages/KitchenSettingsPage.jsx';
 import CheckoutPage from './features/order/pages/CheckoutPage.jsx';
 import BuyerOrdersPage from './features/order/pages/BuyerOrdersPage.jsx';
 import OrderDetailPage from './features/order/pages/OrderDetailPage.jsx';
@@ -122,6 +123,15 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['kitchen']}>
               <KitchenOrdersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kitchen/settings"
+          element={
+            <ProtectedRoute allowedRoles={['kitchen']}>
+              <KitchenSettingsPage />
             </ProtectedRoute>
           }
         />

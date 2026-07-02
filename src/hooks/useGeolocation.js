@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../features/auth/authSlice.js';
 
 // Default center: Delhi, India
 const DEFAULT_LOCATION = {
@@ -39,12 +41,19 @@ const cacheLocation = (lat, lng) => {
  * Hook to get user's GPS location.
  * Strategy:
  *  1. Instantly use cached location from sessionStorage if available.
- *  2. Fire a FAST low-accuracy request (WiFi/IP based, resolves in <2s).
- *  3. Then fire a HIGH-accuracy refinement in the background.
- *  4. Falls back to Delhi if both fail.
+ *  2. OR use user's saved default location from Redux profile.
+ *  3. Fire a FAST low-accuracy request (WiFi/IP based, resolves in <2s) if no cache.
+ *  4. Then fire a HIGH-accuracy refinement in the background.
+ *  5. Falls back to Delhi if both fail.
  */
-export default function useGeolocation() {
-  const cached = getCachedLocation();
+export default function useGeolocation(autoFetch = true) {
+  const user = useSelector(selectCurrentUser);
+  const userLocation = user?.location?.coordinates ? {
+    latitude: user.location.coordinates[1], // index 1 is lat
+    longitude: user.location.coordinates[0], // index 0 is lng
+  } : null;
+
+  const cached = getCachedLocation() || userLocation;
   const [location, setLocation] = useState(cached);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(!cached); // not loading if we have cache
@@ -110,8 +119,12 @@ export default function useGeolocation() {
   }, [applyLocation, fallbackToDefault]);
 
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+    if (autoFetch && !cached) {
+      requestLocation();
+    } else if (cached) {
+      setLoading(false);
+    }
+  }, [autoFetch, requestLocation]);
 
   return {
     location,

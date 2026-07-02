@@ -119,9 +119,26 @@ function PendingKitchensList() {
         <div key={k._id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="font-semibold text-surface-800">{k.name}</p>
-            <p className="text-xs text-surface-500">Owner: {k.owner?.name} ({k.owner?.email})</p>
+            <p className="text-xs text-surface-500 mb-2">Owner: {k.owner?.name} ({k.owner?.email})</p>
+            
+            {/* Display KYC Documents */}
+            {k.kycDetails?.documentUrl ? (
+              <div className="mt-2">
+                <a
+                  href={k.kycDetails.documentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                >
+                  📄 View KYC Document
+                </a>
+              </div>
+            ) : (
+              <p className="text-xs text-red-500 font-medium mt-1">No KYC document uploaded</p>
+            )}
           </div>
-          <div className="flex gap-2">
+          
+          <div className="flex gap-2 shrink-0">
             <Button variant="outline" onClick={() => handleModerate(k._id, false)} className="text-red-600 hover:bg-red-50 border-red-200 py-1.5 px-3">
               <XCircle className="w-4 h-4 mr-1" /> Reject
             </Button>
@@ -143,32 +160,49 @@ function KitchensTab() {
 
   return (
     <div className="bg-white rounded-2xl border border-surface-100 shadow-soft overflow-hidden">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-surface-50 text-surface-500">
-          <tr>
-            <th className="px-6 py-3 font-medium">Name</th>
-            <th className="px-6 py-3 font-medium">Owner</th>
-            <th className="px-6 py-3 font-medium">Status</th>
-            <th className="px-6 py-3 font-medium">Rating</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-surface-100">
-          {kitchens.map((k) => (
-            <tr key={k._id} className="hover:bg-surface-50 transition-colors">
-              <td className="px-6 py-4 font-medium text-surface-800">{k.name}</td>
-              <td className="px-6 py-4 text-surface-600">{k.owner?.name}</td>
-              <td className="px-6 py-4">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                  k.isApproved ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                }`}>
-                  {k.isApproved ? 'Approved' : 'Pending'}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-surface-600">{k.rating?.average?.toFixed(1) || '0.0'} ({k.rating?.count || 0})</td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[600px]">
+          <thead className="bg-surface-50 text-surface-500">
+            <tr>
+              <th className="px-6 py-3 font-medium">Name</th>
+              <th className="px-6 py-3 font-medium">Owner</th>
+              <th className="px-6 py-3 font-medium">Status</th>
+              <th className="px-6 py-3 font-medium">Documents</th>
+              <th className="px-6 py-3 font-medium">Rating</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-surface-100">
+            {kitchens.map((k) => (
+              <tr key={k._id} className="hover:bg-surface-50 transition-colors">
+                <td className="px-6 py-4 font-medium text-surface-800">{k.name}</td>
+                <td className="px-6 py-4 text-surface-600">{k.owner?.name}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                    k.isApproved ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    {k.isApproved ? 'Approved' : 'Pending'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  {k.kycDetails?.documentUrl ? (
+                    <a
+                      href={k.kycDetails.documentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 border border-blue-200 inline-block"
+                    >
+                      View PDF
+                    </a>
+                  ) : (
+                    <span className="text-xs text-surface-400">None</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-surface-600 flex items-center gap-1">{k.rating?.average?.toFixed(1) || '0.0'} ({k.rating?.count || 0})</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

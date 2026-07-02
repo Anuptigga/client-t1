@@ -34,10 +34,10 @@ export default function CheckoutPage() {
   const [verifyPayment, { isLoading: isVerifying }] = useVerifyPaymentMutation();
   const [deliveryType, setDeliveryType] = useState('delivery');
   const [address, setAddress] = useState({
-    street: '',
-    city: '',
-    state: '',
-    pincode: '',
+    street: user?.defaultAddress?.street || '',
+    city: user?.defaultAddress?.city || '',
+    state: user?.defaultAddress?.state || '',
+    pincode: user?.defaultAddress?.pincode || '',
   });
   const [buyerNote, setBuyerNote] = useState('');
   const [orderPlaced, setOrderPlaced] = useState(null);

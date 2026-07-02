@@ -13,6 +13,7 @@ import {
   Bell,
   ChevronDown,
   ShoppingBag,
+  Settings,
 } from 'lucide-react';
 import { selectCurrentUser, selectIsAuthenticated, logout } from '../../features/auth/authSlice.js';
 import { useLogoutMutation } from '../../features/auth/authApi.js';
@@ -28,6 +29,7 @@ const roleNavItems = {
     { label: 'Menu', path: '/kitchen/menu', icon: null },
     { label: 'Orders', path: '/kitchen/orders', icon: null },
     { label: 'Wallet', path: '/kitchen/wallet', icon: Wallet },
+    { label: 'Settings', path: '/kitchen/settings', icon: Settings },
   ],
   delivery: [
     { label: 'Available Orders', path: '/delivery/orders', icon: Truck },
