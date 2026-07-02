@@ -17,10 +17,10 @@ export const adminApi = apiSlice.injectEndpoints({
     }),
 
     moderateKitchen: builder.mutation({
-      query: ({ id, isApproved }) => ({
+      query: ({ id, isApproved, reason }) => ({
         url: `/admin/kitchens/${id}/moderate`,
         method: 'PUT',
-        body: { isApproved },
+        body: { isApproved, reason },
       }),
       invalidatesTags: ['Kitchen'],
     }),

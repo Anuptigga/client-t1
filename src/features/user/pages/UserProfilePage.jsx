@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import PageShell from '../../../components/layout/PageShell.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import { selectCurrentUser, setCredentials } from '../../auth/authSlice.js';
-import { useUpdateProfileMutation } from '../userApi.js';
+import { useUpdateProfileMutation, useUpdateUserLocationMutation } from '../userApi.js';
 import { useUploadImageMutation } from '../../kitchen/foodApi.js';
 
 export default function UserProfilePage() {

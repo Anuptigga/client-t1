@@ -98,13 +98,27 @@ function StatCard({ title, value, icon, color, bg }) {
 function PendingKitchensList() {
   const { data, isLoading } = useGetKitchensQuery({ status: 'pending', limit: 5 });
   const [moderateKitchen] = useModerateKitchenMutation();
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
-  const handleModerate = async (id, isApproved) => {
+  const handleApprove = async (id) => {
     try {
-      await moderateKitchen({ id, isApproved }).unwrap();
-      toast.success(isApproved ? 'Kitchen approved' : 'Kitchen rejected');
+      await moderateKitchen({ id, isApproved: true }).unwrap();
+      toast.success('Kitchen approved');
     } catch (err) {
-      toast.error('Failed to moderate kitchen');
+      toast.error('Failed to approve kitchen');
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectReason.trim()) return toast.error('Please enter a rejection reason');
+    try {
+      await moderateKitchen({ id: rejectingId, isApproved: false, reason: rejectReason.trim() }).unwrap();
+      toast.success('Kitchen rejected and deleted');
+      setRejectingId(null);
+      setRejectReason('');
+    } catch (err) {
+      toast.error('Failed to reject kitchen');
     }
   };
 
@@ -114,41 +128,70 @@ function PendingKitchensList() {
   if (kitchens.length === 0) return <p className="text-sm text-surface-500 py-4">No pending approvals.</p>;
 
   return (
-    <div className="divide-y divide-surface-100">
-      {kitchens.map((k) => (
-        <div key={k._id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-surface-800">{k.name}</p>
-            <p className="text-xs text-surface-500 mb-2">Owner: {k.owner?.name} ({k.owner?.email})</p>
+    <>
+      <div className="divide-y divide-surface-100">
+        {kitchens.map((k) => (
+          <div key={k._id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-surface-800">{k.name}</p>
+              <p className="text-xs text-surface-500 mb-2">Owner: {k.owner?.name} ({k.owner?.email})</p>
+              
+              {/* Display KYC Documents */}
+              {k.kycDetails?.documentUrl ? (
+                <div className="mt-2">
+                  <a
+                    href={k.kycDetails.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                  >
+                    📄 View KYC Document
+                  </a>
+                </div>
+              ) : (
+                <p className="text-xs text-red-500 font-medium mt-1">No KYC document uploaded</p>
+              )}
+            </div>
             
-            {/* Display KYC Documents */}
-            {k.kycDetails?.documentUrl ? (
-              <div className="mt-2">
-                <a
-                  href={k.kycDetails.documentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                >
-                  📄 View KYC Document
-                </a>
-              </div>
-            ) : (
-              <p className="text-xs text-red-500 font-medium mt-1">No KYC document uploaded</p>
-            )}
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" onClick={() => { setRejectingId(k._id); setRejectReason(''); }} className="text-red-600 hover:bg-red-50 border-red-200 py-1.5 px-3">
+                <XCircle className="w-4 h-4 mr-1" /> Reject
+              </Button>
+              <Button onClick={() => handleApprove(k._id)} className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3">
+                <CheckCircle className="w-4 h-4 mr-1" /> Approve
+              </Button>
+            </div>
           </div>
-          
-          <div className="flex gap-2 shrink-0">
-            <Button variant="outline" onClick={() => handleModerate(k._id, false)} className="text-red-600 hover:bg-red-50 border-red-200 py-1.5 px-3">
-              <XCircle className="w-4 h-4 mr-1" /> Reject
-            </Button>
-            <Button onClick={() => handleModerate(k._id, true)} className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3">
-              <CheckCircle className="w-4 h-4 mr-1" /> Approve
-            </Button>
+        ))}
+      </div>
+
+      {/* Rejection Reason Modal */}
+      {rejectingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <h3 className="text-lg font-bold text-surface-800 mb-2">Reject Kitchen</h3>
+            <p className="text-sm text-surface-500 mb-4">
+              Please provide a reason for rejection. The kitchen owner will see this reason and can re-apply from scratch.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="e.g. Documents are blurry, missing FSSAI license..."
+              className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none"
+            />
+            <div className="flex gap-3 mt-4 justify-end">
+              <Button variant="outline" onClick={() => setRejectingId(null)} className="py-1.5 px-4">
+                Cancel
+              </Button>
+              <Button onClick={handleRejectConfirm} className="bg-red-600 hover:bg-red-700 text-white py-1.5 px-4">
+                <XCircle className="w-4 h-4 mr-1" /> Confirm Rejection
+              </Button>
+            </div>
           </div>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
 

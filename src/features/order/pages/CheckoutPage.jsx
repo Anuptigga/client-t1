@@ -16,7 +16,7 @@ import {
   selectCartSubtotal,
   clearCart,
 } from '../../cart/cartSlice.js';
-import { usePlaceOrderMutation, useVerifyPaymentMutation } from '../../order/orderApi.js';
+import { usePlaceOrderMutation, useVerifyPaymentMutation, useCancelOrderMutation } from '../../order/orderApi.js';
 import { selectCurrentUser } from '../../auth/authSlice.js';
 import useGeolocation from '../../../hooks/useGeolocation.js';
 
@@ -32,6 +32,7 @@ export default function CheckoutPage() {
 
   const [placeOrder, { isLoading }] = usePlaceOrderMutation();
   const [verifyPayment, { isLoading: isVerifying }] = useVerifyPaymentMutation();
+  const [cancelOrder] = useCancelOrderMutation();
   const [deliveryType, setDeliveryType] = useState('delivery');
   const [address, setAddress] = useState({
     street: user?.defaultAddress?.street || '',
@@ -148,8 +149,15 @@ export default function CheckoutPage() {
           contact: user?.phone || '',
         },
         modal: {
-          ondismiss: () => {
-            toast('Payment was not completed. Your cart is still available.');
+          ondismiss: async () => {
+            // User closed the Razorpay popup without paying — cancel the order to release stock
+            try {
+              await cancelOrder({ orderId: order._id, reason: 'Payment not completed by buyer' }).unwrap();
+              toast('Order cancelled. Your stock has been released.', { icon: '⚠️' });
+            } catch (err) {
+              // Order may already be cancelled or in a terminal state
+              toast('Payment was not completed.', { icon: '⚠️' });
+            }
           },
         },
         theme: {

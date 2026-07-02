@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   ChefHat, UtensilsCrossed, Package, AlertTriangle,
   ToggleLeft, ToggleRight, ArrowRight, RefreshCw, Loader2,
@@ -10,8 +11,10 @@ import Button from '../../../components/ui/Button.jsx';
 import { useGetMyKitchenQuery, useToggleKitchenStatusMutation } from '../kitchenApi.js';
 import { useGetMyFoodStatsQuery } from '../foodApi.js';
 import { useSocket } from '../../../hooks/useSocket.js';
+import { selectCurrentUser } from '../../auth/authSlice.js';
 
 export default function KitchenDashboardPage() {
+  const user = useSelector(selectCurrentUser);
   const { data: kitchenData, isLoading: kitchenLoading } = useGetMyKitchenQuery();
   const { data: statsData, isLoading: statsLoading } = useGetMyFoodStatsQuery();
   const [toggleStatus, { isLoading: toggling }] = useToggleKitchenStatusMutation();
@@ -63,6 +66,20 @@ export default function KitchenDashboardPage() {
           <ChefHat className="w-16 h-16 text-surface-300 mb-4" />
           <h2 className="text-xl font-bold text-surface-700 mb-2">No Kitchen Registered</h2>
           <p className="text-surface-500 mb-6">Register your kitchen to start selling.</p>
+
+          {/* Show rejection reason if previous application was rejected */}
+          {user?.kitchenRejection?.reason && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 max-w-md w-full">
+              <p className="text-sm font-semibold text-red-700 mb-1">⚠️ Previous Application Rejected</p>
+              <p className="text-sm text-red-600">{user.kitchenRejection.reason}</p>
+              {user.kitchenRejection.rejectedAt && (
+                <p className="text-xs text-red-400 mt-2">
+                  Rejected on: {new Date(user.kitchenRejection.rejectedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+
           <Link to="/kitchen/register">
             <Button>Register Kitchen</Button>
           </Link>
